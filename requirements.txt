@@ -16,12 +16,8 @@ Pillow>=10.0.0
 ftfy
 tqdm
 
-# Captioning (optional, for custom datasets without captions)
-# transformers already includes BLIP
-
 # Evaluation
 torchmetrics>=1.3.0
-clip-by-openai @ git+https://github.com/openai/CLIP.git ; python_version < "3.13"
 
 # Logging / utilities
 tensorboard
