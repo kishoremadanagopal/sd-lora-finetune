@@ -1,0 +1,141 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 620" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .box { fill:#fff; stroke:#334155; stroke-width:1.5; rx:8; }
+      .data { fill:#eef2ff; stroke:#4f46e5; }
+      .model { fill:#fef3c7; stroke:#d97706; }
+      .trainable { fill:#dcfce7; stroke:#16a34a; }
+      .frozen { fill:#fee2e2; stroke:#dc2626; }
+      .eval { fill:#f3e8ff; stroke:#9333ea; }
+      .out { fill:#f1f5f9; stroke:#475569; }
+      .lbl { font-size:13px; fill:#0f172a; font-weight:600; }
+      .sub { font-size:10.5px; fill:#475569; }
+      .title { font-size:18px; font-weight:700; fill:#0f172a; }
+      .section { font-size:11px; font-weight:700; fill:#64748b; letter-spacing:0.08em; }
+      .arrow { stroke:#475569; stroke-width:1.5; fill:none; marker-end:url(#arr); }
+      .arrow-dash { stroke:#94a3b8; stroke-width:1.5; fill:none; stroke-dasharray:4 3; marker-end:url(#arr); }
+    </style>
+  </defs>
+
+  <text x="490" y="32" text-anchor="middle" class="title">SD 1.5 LoRA Fine-Tuning Pipeline</text>
+
+  <!-- DATA ROW -->
+  <text x="40" y="80" class="section">DATA</text>
+  <rect class="box data" x="40" y="90"  width="170" height="60"/>
+  <text x="125" y="115" text-anchor="middle" class="lbl">HF Hub Dataset</text>
+  <text x="125" y="132" text-anchor="middle" class="sub">pokemon-blip-captions</text>
+
+  <rect class="box data" x="40" y="170" width="170" height="60"/>
+  <text x="125" y="195" text-anchor="middle" class="lbl">Local Image Folder</text>
+  <text x="125" y="212" text-anchor="middle" class="sub">+ .txt captions / BLIP auto</text>
+
+  <rect class="box data" x="260" y="130" width="140" height="60"/>
+  <text x="330" y="155" text-anchor="middle" class="lbl">Dataset Loader</text>
+  <text x="330" y="172" text-anchor="middle" class="sub">resize · crop · tokenize</text>
+
+  <path class="arrow" d="M210,120 C235,120 240,150 260,155"/>
+  <path class="arrow" d="M210,200 C235,200 240,170 260,165"/>
+
+  <!-- TRAINING CORE -->
+  <text x="450" y="80" class="section">TRAINING</text>
+  <rect class="box frozen" x="450" y="90"  width="150" height="56"/>
+  <text x="525" y="113" text-anchor="middle" class="lbl">VAE (frozen)</text>
+  <text x="525" y="130" text-anchor="middle" class="sub">image → latents</text>
+
+  <rect class="box frozen" x="450" y="160" width="150" height="56"/>
+  <text x="525" y="183" text-anchor="middle" class="lbl">CLIP Text Encoder</text>
+  <text x="525" y="200" text-anchor="middle" class="sub">caption → embedding (frozen)</text>
+
+  <rect class="box trainable" x="640" y="100" width="190" height="116"/>
+  <text x="735" y="125" text-anchor="middle" class="lbl">UNet + LoRA</text>
+  <text x="735" y="143" text-anchor="middle" class="sub">base weights: frozen ❄</text>
+  <text x="735" y="160" text-anchor="middle" class="sub">LoRA adapters: trainable ✓</text>
+  <text x="735" y="180" text-anchor="middle" class="sub">on q/k/v/out cross-attn</text>
+  <text x="735" y="200" text-anchor="middle" class="sub">~0.8M params (rank 4)</text>
+
+  <path class="arrow" d="M400,160 C420,160 425,120 450,118"/>
+  <path class="arrow" d="M400,165 C420,165 425,185 450,188"/>
+  <path class="arrow" d="M600,118 C620,118 625,140 640,145"/>
+  <path class="arrow" d="M600,188 C620,188 625,170 640,165"/>
+
+  <!-- LOSS -->
+  <rect class="box out" x="640" y="246" width="190" height="64"/>
+  <text x="735" y="270" text-anchor="middle" class="lbl">Diffusion Loss</text>
+  <text x="735" y="287" text-anchor="middle" class="sub">MSE(ε_pred, ε_true)</text>
+  <text x="735" y="302" text-anchor="middle" class="sub">+ AdamW · grad checkpoint</text>
+  <path class="arrow" d="M735,216 L735,246"/>
+  <path class="arrow-dash" d="M735,310 C880,310 880,160 832,160"/>
+  <text x="880" y="237" text-anchor="middle" class="sub" fill="#64748b">backprop →</text>
+  <text x="880" y="250" text-anchor="middle" class="sub" fill="#64748b">LoRA only</text>
+
+  <!-- CHECKPOINT -->
+  <rect class="box out" x="860" y="100" width="100" height="60"/>
+  <text x="910" y="125" text-anchor="middle" class="lbl">LoRA</text>
+  <text x="910" y="140" text-anchor="middle" class="sub">.safetensors</text>
+  <text x="910" y="153" text-anchor="middle" class="sub">~3–6 MB</text>
+  <path class="arrow" d="M830,135 L860,130"/>
+
+  <!-- EVAL ROW -->
+  <text x="40" y="380" class="section">EVALUATION</text>
+  <line x1="40" y1="345" x2="940" y2="345" stroke="#e2e8f0" stroke-width="1"/>
+
+  <rect class="box eval" x="40"  y="395" width="170" height="70"/>
+  <text x="125" y="420" text-anchor="middle" class="lbl">Eval Prompts</text>
+  <text x="125" y="437" text-anchor="middle" class="sub">held-out, same seeds</text>
+  <text x="125" y="452" text-anchor="middle" class="sub">for fair before/after</text>
+
+  <rect class="box model" x="260" y="385" width="170" height="44"/>
+  <text x="345" y="412" text-anchor="middle" class="lbl">Base SD 1.5 Pipeline</text>
+
+  <rect class="box model" x="260" y="445" width="170" height="44"/>
+  <text x="345" y="472" text-anchor="middle" class="lbl">SD 1.5 + LoRA Pipeline</text>
+
+  <path class="arrow" d="M210,420 L260,407"/>
+  <path class="arrow" d="M210,440 L260,467"/>
+  <path class="arrow-dash" d="M910,162 C940,162 940,460 430,467"/>
+
+  <rect class="box out" x="470" y="385" width="160" height="44"/>
+  <text x="550" y="412" text-anchor="middle" class="lbl">Base Images</text>
+
+  <rect class="box out" x="470" y="445" width="160" height="44"/>
+  <text x="550" y="472" text-anchor="middle" class="lbl">LoRA Images</text>
+
+  <path class="arrow" d="M430,407 L470,407"/>
+  <path class="arrow" d="M430,467 L470,467"/>
+
+  <rect class="box eval" x="680" y="385" width="150" height="104"/>
+  <text x="755" y="412" text-anchor="middle" class="lbl">CLIP Score</text>
+  <text x="755" y="430" text-anchor="middle" class="sub">cosine(I, T) × 100</text>
+  <text x="755" y="448" text-anchor="middle" class="sub">per-prompt + mean</text>
+  <text x="755" y="468" text-anchor="middle" class="sub">Δ = lora − base</text>
+
+  <rect class="box out" x="860" y="385" width="100" height="104"/>
+  <text x="910" y="410" text-anchor="middle" class="lbl">Report</text>
+  <text x="910" y="428" text-anchor="middle" class="sub">report.json</text>
+  <text x="910" y="446" text-anchor="middle" class="sub">comparison/</text>
+  <text x="910" y="464" text-anchor="middle" class="sub">side-by-side</text>
+
+  <path class="arrow" d="M630,407 L680,420"/>
+  <path class="arrow" d="M630,467 L680,455"/>
+  <path class="arrow" d="M830,437 L860,437"/>
+
+  <!-- LEGEND -->
+  <text x="40" y="540" class="section">LEGEND</text>
+  <rect class="box trainable" x="40"  y="555" width="14" height="14"/>
+  <text x="62" y="566" class="sub">Trainable (LoRA)</text>
+  <rect class="box frozen"    x="180" y="555" width="14" height="14"/>
+  <text x="202" y="566" class="sub">Frozen base</text>
+  <rect class="box data"      x="300" y="555" width="14" height="14"/>
+  <text x="322" y="566" class="sub">Data</text>
+  <rect class="box model"     x="380" y="555" width="14" height="14"/>
+  <text x="402" y="566" class="sub">Inference</text>
+  <rect class="box eval"      x="480" y="555" width="14" height="14"/>
+  <text x="502" y="566" class="sub">Evaluation</text>
+  <rect class="box out"       x="580" y="555" width="14" height="14"/>
+  <text x="602" y="566" class="sub">Artifact</text>
+
+  <text x="40"  y="595" class="sub">Solid arrows = forward / data flow · Dashed = gradient or weight load</text>
+</svg>

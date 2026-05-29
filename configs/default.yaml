@@ -1,0 +1,64 @@
+# Default training configuration for SD 1.5 LoRA fine-tuning
+# Override any field on the CLI: python scripts/train_lora.py --config configs/default.yaml dataset.name=lambdalabs/pokemon-blip-captions
+
+model:
+  pretrained_model_name_or_path: "runwayml/stable-diffusion-v1-5"
+  revision: null
+
+# ----- Dataset -----
+# Two modes:
+#  (1) Public HF dataset: set `name` to a hub id and `image_column`/`caption_column`
+#  (2) Custom local folder: set `name: null` and `image_dir` to a folder of images.
+#      Captions are read from a sibling .txt file per image, OR generated with BLIP
+#      if `auto_caption: true`.
+dataset:
+  name: "lambdalabs/pokemon-blip-captions"   # public demo dataset
+  image_column: "image"
+  caption_column: "text"
+  image_dir: null                             # e.g. "data/raw/my_concept"
+  auto_caption: false                         # caption local images with BLIP if true
+  instance_prompt: null                       # e.g. "a photo of sks dog" for DreamBooth-style
+  resolution: 512
+  center_crop: true
+  random_flip: true
+  max_train_samples: null                     # cap for quick smoke runs
+
+# ----- LoRA -----
+lora:
+  rank: 4                  # 4–16 typical; higher = more capacity, larger file
+  alpha: 4                 # commonly set equal to rank
+  target_modules:          # which UNet projections to adapt
+    - "to_q"
+    - "to_k"
+    - "to_v"
+    - "to_out.0"
+  dropout: 0.0
+
+# ----- Training -----
+training:
+  output_dir: "outputs/checkpoints/lora_run"
+  seed: 42
+  train_batch_size: 1
+  gradient_accumulation_steps: 4
+  num_train_epochs: 100
+  max_train_steps: null    # if set, overrides epochs
+  learning_rate: 1.0e-4
+  lr_scheduler: "constant"
+  lr_warmup_steps: 0
+  mixed_precision: "fp16"  # "no", "fp16", "bf16"
+  gradient_checkpointing: true
+  enable_xformers: true    # auto-falls-back if unavailable
+  checkpoint_every: 500
+  validation_every: 250
+  validation_prompts:
+    - "a drawing of a green pokemon with red eyes"
+    - "a cartoon character with a face on it"
+    - "a yellow and blue toy with a red nose"
+  num_validation_images: 2
+
+# ----- Evaluation -----
+eval:
+  clip_model: "openai/clip-vit-base-patch32"
+  num_eval_samples: 16
+  guidance_scale: 7.5
+  num_inference_steps: 30

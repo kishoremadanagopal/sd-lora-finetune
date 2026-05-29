@@ -1,0 +1,35 @@
+# Core diffusion stack
+diffusers>=0.27.0
+transformers>=4.38.0
+accelerate>=0.27.0
+peft>=0.10.0
+safetensors>=0.4.0
+
+# PyTorch — install separately for your CUDA version:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+torch>=2.1.0
+torchvision>=0.16.0
+
+# Dataset / image handling
+datasets>=2.18.0
+Pillow>=10.0.0
+ftfy
+tqdm
+
+# Captioning (optional, for custom datasets without captions)
+# transformers already includes BLIP
+
+# Evaluation
+torchmetrics>=1.3.0
+clip-by-openai @ git+https://github.com/openai/CLIP.git ; python_version < "3.13"
+
+# Logging / utilities
+tensorboard
+matplotlib
+pyyaml
+omegaconf
+
+# Memory / speed (optional but recommended on CUDA)
+# xformers — install matching your torch+CUDA build:
+# pip install xformers
+bitsandbytes ; sys_platform == "linux"

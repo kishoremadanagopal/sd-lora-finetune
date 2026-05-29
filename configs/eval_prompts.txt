@@ -1,0 +1,9 @@
+# Evaluation prompts — one per line. Lines starting with # are ignored.
+a drawing of a green pokemon with red eyes
+a cartoon character with a face on it
+a yellow and blue toy with a red nose
+a small pink pokemon with big ears
+a fire-type pokemon with orange flames
+a water-type pokemon swimming in the ocean
+a purple ghost pokemon floating
+a grass-type pokemon with leaves on its head
