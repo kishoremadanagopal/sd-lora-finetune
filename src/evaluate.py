@@ -40,19 +40,21 @@ class CLIPScorer:
         assert len(images) == len(prompts), "images and prompts must be 1:1"
 
         img_inputs = self.processor(images=images, return_tensors="pt").to(self.device)
-        txt_inputs = self.processor(
-            text=prompts, return_tensors="pt", padding=True, truncation=True,
+        txt_inputs = self.processor.tokenizer(
+            prompts, return_tensors="pt", padding=True, truncation=True,
         ).to(self.device)
 
-        img_feats = self.model.get_image_features(**img_inputs)
-        txt_feats = self.model.get_text_features(**txt_inputs)
+        img_feats = self.model.get_image_features(pixel_values=img_inputs["pixel_values"])
+        txt_feats = self.model.get_text_features(
+            input_ids=txt_inputs["input_ids"],
+            attention_mask=txt_inputs.get("attention_mask"),
+        )
 
         img_feats = img_feats / img_feats.norm(dim=-1, keepdim=True)
         txt_feats = txt_feats / txt_feats.norm(dim=-1, keepdim=True)
 
         cos = (img_feats * txt_feats).sum(dim=-1)
         return (cos * 100.0).cpu().tolist()
-
 
 # --------------------------------------------------------------------------- #
 # Before / after evaluation
