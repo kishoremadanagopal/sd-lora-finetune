@@ -12,7 +12,8 @@ model:
 #      Captions are read from a sibling .txt file per image, OR generated with BLIP
 #      if `auto_caption: true`.
 dataset:
-  name: "lambdalabs/pokemon-blip-captions"   # public demo dataset
+  #name: "lambdalabs/pokemon-blip-captions"   # public demo dataset
+  name: "reach-vb/pokemon-blip-captions"     # mirror of lambdalabs (DMCA-takedown'd)
   image_column: "image"
   caption_column: "text"
   image_dir: null                             # e.g. "data/raw/my_concept"
