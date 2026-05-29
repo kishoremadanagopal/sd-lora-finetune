@@ -79,6 +79,11 @@ def run_validation(
     unet_eval = accelerator.unwrap_model(unet)
     unet_eval.eval()
 
+# Determine dtype consistent with mixed precision
+    val_dtype = torch.float16 if accelerator.mixed_precision == "fp16" else (
+        torch.bfloat16 if accelerator.mixed_precision == "bf16" else torch.float32
+    )
+
     pipeline = StableDiffusionPipeline.from_pretrained(
         cfg.model.pretrained_model_name_or_path,
         unet=unet_eval,
@@ -86,9 +91,13 @@ def run_validation(
         vae=vae,
         tokenizer=tokenizer,
         safety_checker=None,
-        torch_dtype=torch.float16 if accelerator.mixed_precision == "fp16" else torch.float32,
+        torch_dtype=val_dtype,
     ).to(accelerator.device)
     pipeline.set_progress_bar_config(disable=True)
+    # Ensure all submodules share the same dtype to avoid float/half mismatches
+    pipeline.vae.to(dtype=val_dtype)
+    pipeline.unet.to(dtype=val_dtype)
+    pipeline.text_encoder.to(dtype=val_dtype)
 
     sample_dir = save_dir / f"step_{step:06d}"
     sample_dir.mkdir(parents=True, exist_ok=True)
