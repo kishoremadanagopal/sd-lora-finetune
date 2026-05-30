@@ -2,9 +2,9 @@
 Evaluation pipeline.
 
 Measures prompt–image alignment with CLIP score (cosine similarity between
-text and image embeddings, in [-100, 100] after the standard ×100 scaling).
-Compares the base SD model against the LoRA-adapted model on the same prompts
-+ same seeds for a fair before/after readout.
+text and image embeddings, scaled by 100). Compares the base SD model against
+the LoRA-adapted model on the same prompts + same seeds for a fair before/after
+readout.
 """
 from __future__ import annotations
 
@@ -23,7 +23,13 @@ from .inference import generate, load_pipeline
 # CLIP score
 # --------------------------------------------------------------------------- #
 class CLIPScorer:
-    """Wraps a CLIP model to score image–text alignment."""
+    """Wraps a CLIP model to score image–text alignment.
+
+    Uses the full forward pass (rather than `get_image_features` /
+    `get_text_features` separately) for robustness across transformers
+    versions — `outputs.image_embeds` and `outputs.text_embeds` are
+    guaranteed plain tensors.
+    """
 
     def __init__(
         self,
@@ -39,22 +45,24 @@ class CLIPScorer:
         """Return per-pair CLIP score = 100 * cos(emb(img), emb(txt))."""
         assert len(images) == len(prompts), "images and prompts must be 1:1"
 
-        img_inputs = self.processor(images=images, return_tensors="pt").to(self.device)
-        txt_inputs = self.processor.tokenizer(
-            prompts, return_tensors="pt", padding=True, truncation=True,
+        inputs = self.processor(
+            text=prompts,
+            images=images,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
         ).to(self.device)
 
-        img_feats = self.model.get_image_features(pixel_values=img_inputs["pixel_values"])
-        txt_feats = self.model.get_text_features(
-            input_ids=txt_inputs["input_ids"],
-            attention_mask=txt_inputs.get("attention_mask"),
-        )
+        outputs = self.model(**inputs)
+        img_feats = outputs.image_embeds
+        txt_feats = outputs.text_embeds
 
         img_feats = img_feats / img_feats.norm(dim=-1, keepdim=True)
         txt_feats = txt_feats / txt_feats.norm(dim=-1, keepdim=True)
 
         cos = (img_feats * txt_feats).sum(dim=-1)
         return (cos * 100.0).cpu().tolist()
+
 
 # --------------------------------------------------------------------------- #
 # Before / after evaluation
@@ -82,7 +90,7 @@ def evaluate(
     scorer = CLIPScorer(clip_model)
 
     # ----- base ------------------------------------------------------- #
-    print("[eval] generating with base model…")
+    print("[eval] generating with base model...")
     base_pipe = load_pipeline(model_id=model_id, lora_path=None)
     base_imgs = generate(
         base_pipe, prompts,
@@ -98,7 +106,7 @@ def evaluate(
 
     # ----- lora ------------------------------------------------------- #
     if lora_path:
-        print("[eval] generating with LoRA model…")
+        print("[eval] generating with LoRA model...")
         lora_pipe = load_pipeline(model_id=model_id, lora_path=lora_path)
         lora_imgs = generate(
             lora_pipe, prompts,
@@ -123,6 +131,9 @@ def evaluate(
             combined.save(out / "comparison" / f"{i:03d}.png")
 
     # ----- report ----------------------------------------------------- #
+    mean_base = sum(base_scores) / len(base_scores)
+    mean_lora = (sum(lora_scores) / len(lora_scores)) if lora_scores else None
+
     report = {
         "model_id": model_id,
         "lora_path": lora_path,
@@ -133,24 +144,19 @@ def evaluate(
                 "prompt": p,
                 "base_clip_score": base_scores[i],
                 "lora_clip_score": (lora_scores[i] if lora_scores else None),
-                "delta": (
-                    lora_scores[i] - base_scores[i] if lora_scores else None
-                ),
+                "delta": (lora_scores[i] - base_scores[i] if lora_scores else None),
             }
             for i, p in enumerate(prompts)
         ],
-        "mean_base_clip_score": sum(base_scores) / len(base_scores),
-        "mean_lora_clip_score": (
-            sum(lora_scores) / len(lora_scores) if lora_scores else None
-        ),
+        "mean_base_clip_score": mean_base,
+        "mean_lora_clip_score": mean_lora,
     }
     with open(out / "report.json", "w") as f:
         json.dump(report, f, indent=2)
 
-    print(f"[eval] mean CLIP — base: {report['mean_base_clip_score']:.2f}", end="")
-    if lora_scores:
-        print(f" | lora: {report['mean_lora_clip_score']:.2f}")
+    if mean_lora is not None:
+        print("[eval] mean CLIP - base: {:.2f} | lora: {:.2f}".format(mean_base, mean_lora))
     else:
-        print()
-    print(f"[eval] report → {out / 'report.json'}")
+        print("[eval] mean CLIP - base: {:.2f}".format(mean_base))
+    print(f"[eval] report -> {out / 'report.json'}")
     return report
