@@ -139,9 +139,9 @@ Paste your numbers and comparison grids here after a run, e.g.:
 
 | Metric                   | Base SD 1.5 | + LoRA (1000 steps) | Δ      |
 | ------------------------ | ----------: | ------------------: | -----: |
-| Mean CLIP score (n=8)    |      `TBD`  |              `TBD`  | `TBD`  |
-| Checkpoint size          |       3.4 GB |                 ~5 MB | −99.9% |
-| VRAM peak (training)     |          —  |              ~7.5 GB |     —  |
+| Mean CLIP score (n=8)    | 33.98       | 33.41               | -0.57  |
+| Checkpoint size          |       3.4 GB |              ~5 MB | −99.9% |
+| VRAM peak (training)     |          —  |             ~7.5 GB |     —  |
 
 `docs/images/comparison_example.png` — base (left) vs LoRA (right) on held-out prompts. ← drop in your own generated grid.
 
