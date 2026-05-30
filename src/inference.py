@@ -1,8 +1,13 @@
 """
 Inference utilities.
 
-Loads a `StableDiffusionPipeline`, optionally attaches a trained LoRA adapter,
-and generates images. Used both by the CLI script and the evaluation pipeline.
+Loads a `StableDiffusionPipeline`, optionally attaches a trained LoRA adapter
+via PEFT (matching the training-time config), and generates images.
+
+Uses PEFT injection directly rather than `pipe.load_lora_weights()` because
+the .safetensors files saved during training use PEFT key format
+(`base_model.model.<...>.lora_A.weight`), which the diffusers loader silently
+ignores for some peft/diffusers version combos.
 """
 from __future__ import annotations
 
@@ -13,13 +18,20 @@ import torch
 from diffusers import StableDiffusionPipeline
 
 
+# Must match the LoRA config used in training (see configs/default.yaml).
+_LORA_RANK = 4
+_LORA_ALPHA = 4
+_LORA_TARGETS = ["to_q", "to_k", "to_v", "to_out.0"]
+_LORA_DROPOUT = 0.0
+
+
 def load_pipeline(
     model_id: str = "runwayml/stable-diffusion-v1-5",
     lora_path: Optional[str] = None,
     device: Optional[str] = None,
     dtype: torch.dtype = torch.float16,
 ) -> StableDiffusionPipeline:
-    """Build the pipeline; attach LoRA weights if a path is given."""
+    """Build the pipeline; attach LoRA weights to the UNet via PEFT if a path is given."""
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
     # fp16 isn't supported on CPU.
@@ -32,9 +44,25 @@ def load_pipeline(
     pipe.set_progress_bar_config(disable=True)
 
     if lora_path:
-        # diffusers >=0.27 understands PEFT-format LoRA via load_lora_weights
-        pipe.load_lora_weights(lora_path)
-        print(f"[inference] loaded LoRA: {lora_path}")
+        from safetensors.torch import load_file
+        from peft import LoraConfig, get_peft_model, set_peft_model_state_dict
+
+        state_dict = load_file(lora_path)
+        print(f"[inference] LoRA file has {len(state_dict)} keys")
+
+        # Re-wrap the UNet with the same LoRA config used at training time, then
+        # load the trained adapter weights into it.
+        lora_config = LoraConfig(
+            r=_LORA_RANK,
+            lora_alpha=_LORA_ALPHA,
+            target_modules=_LORA_TARGETS,
+            lora_dropout=_LORA_DROPOUT,
+            bias="none",
+        )
+        pipe.unet = get_peft_model(pipe.unet, lora_config)
+        set_peft_model_state_dict(pipe.unet, state_dict)
+        pipe.unet = pipe.unet.to(device=device, dtype=dtype)
+        print(f"[inference] LoRA loaded: {lora_path}")
 
     return pipe
 
